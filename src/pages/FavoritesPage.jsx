@@ -1,12 +1,23 @@
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { db } from "../lib/firebase";
 import { get, ref } from "firebase/database";
 import NannyCard from "../components/NannyCard";
 import { readFavorites } from "../utils/favorites";
+import { AuthContext } from "../App";
 
 export default function FavoritesPage() {
+  const { currentUser } = useContext(AuthContext);
   const [items, setItems] = useState([]);
+
+  if (!currentUser) {
+    return (
+      <section>
+        <h2>Favorites</h2>
+        <p>Bu sayfa için giriş yapmalısınız.</p>
+      </section>
+    );
+  }
 
   useEffect(() => {
     async function load() {
