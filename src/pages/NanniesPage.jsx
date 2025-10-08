@@ -38,6 +38,11 @@ export default function NanniesPage() {
         const maybe = rootVal?.nannies ?? rootVal;
         data = toArray(maybe);
       }
+      // UI tutarlılığı için her durumda client-side filtre uygula
+      if (sort === "price") {
+        data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1])
+                   .sort((a,b)=> a.price_per_hour - b.price_per_hour)
+      }
       setItems(data);
       setLastName(data[data.length - 1]?.name || null);
     } catch (e) {
@@ -48,7 +53,7 @@ export default function NanniesPage() {
         data.sort((a,b)=> a.name.localeCompare(b.name));
         if (sort === "name-desc") data.reverse();
       } else if (sort === "price") {
-        data = data.filter(x=> x.price_per_hour >= price[0] && x.price_per_hour <= price[1]).sort((a,b)=> a.price_per_hour - b.price_per_hour);
+        data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1]).sort((a,b)=> a.price_per_hour - b.price_per_hour);
       } else if (sort === "rating-asc" || sort === "rating") {
         data.sort((a,b)=> a.rating - b.rating);
       } else if (sort === "rating-desc") {

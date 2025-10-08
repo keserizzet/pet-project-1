@@ -1,4 +1,5 @@
 const KEY = "favorites:nannies";
+const SNAP_KEY = "favorites:nannies:snapshots";
 
 export function readFavorites() {
   try {
@@ -23,4 +24,19 @@ export function toggleFav(id) {
 
 export function setFavorites(ids) {
   localStorage.setItem(KEY, JSON.stringify(ids || []));
+}
+
+export function saveSnapshot(nanny) {
+  try {
+    const map = JSON.parse(localStorage.getItem(SNAP_KEY) || '{}');
+    map[nanny.id] = nanny;
+    localStorage.setItem(SNAP_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export function readSnapshot(id) {
+  try {
+    const map = JSON.parse(localStorage.getItem(SNAP_KEY) || '{}');
+    return map[id];
+  } catch { return undefined }
 }

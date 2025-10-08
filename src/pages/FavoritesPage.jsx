@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { db } from "../lib/firebase";
 import { get, ref } from "firebase/database";
 import NannyCard from "../components/NannyCard";
-import { readFavorites } from "../utils/favorites";
+import { readFavorites, readSnapshot } from "../utils/favorites";
 import { AuthContext } from "../App";
 
 export default function FavoritesPage() {
@@ -23,6 +23,9 @@ export default function FavoritesPage() {
     async function load() {
       const ids = readFavorites();
       const promises = ids.map(async (id) => {
+        // önce local snapshot dene (görseller erişilemese bile render olsun)
+        const local = readSnapshot(id);
+        if (local) return local;
         const snap = await get(ref(db, `nannies/${id}`));
         return { id, ...snap.val() };
       });

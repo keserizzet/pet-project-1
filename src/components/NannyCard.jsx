@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { AuthContext } from "../App";
-import { isFav, toggleFav } from "../utils/favorites";
+import { isFav, toggleFav, saveSnapshot } from "../utils/favorites";
 import ReadMoreModal from "./ReadMoreModal";
 import AppointmentModal from "./AppointmentModal";
 
@@ -15,6 +15,8 @@ export default function NannyCard({ nanny, onChangeFav }) {
       alert("Bu özellik için giriş yapmalısınız.");
       return;
     }
+    // favoriye alınırken görsel ve detaylar offline kalabilsin
+    saveSnapshot(nanny);
     const list = toggleFav(nanny.id);
     setFav(list.includes(nanny.id));
     onChangeFav?.(list);
