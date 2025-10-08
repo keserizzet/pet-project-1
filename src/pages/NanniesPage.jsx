@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useContext } from "react";
 import { db } from "../lib/firebase";
-import { get, query, ref, orderByChild, limitToFirst, startAt, limitToLast, endAt } from "firebase/database";
+import { get, ref } from "firebase/database";
 import { AuthContext } from "../App";
 import NannyCard from "../components/NannyCard";
 import { setFavorites } from "../utils/favorites";
@@ -14,74 +14,54 @@ function toArray(obj) {
 
 export default function NanniesPage() {
   const { currentUser } = useContext(AuthContext);
+  const [allItems, setAllItems] = useState([]);
   const [items, setItems] = useState([]);
-  const [lastName, setLastName] = useState(null);
+  const [page, setPage] = useState(1);
   const [sort, setSort] = useState("name-asc");
   const [price, setPrice] = useState([0, 1000]);
   const [loading, setLoading] = useState(false);
 
-  async function fetchFirst() {
+  async function fetchAll() {
     setLoading(true);
-    let q;
-    try {
-      if (sort === "name-asc") q = query(ref(db, "nannies"), orderByChild("name"), limitToFirst(PAGE_SIZE));
-      else if (sort === "name-desc") q = query(ref(db, "nannies"), orderByChild("name"), limitToLast(PAGE_SIZE));
-      else if (sort === "price") q = query(ref(db, "nannies"), orderByChild("price_per_hour"), startAt(price[0]), endAt(price[1]), limitToFirst(PAGE_SIZE));
-      else if (sort === "rating-asc") q = query(ref(db, "nannies"), orderByChild("rating"), limitToFirst(PAGE_SIZE));
-      else if (sort === "rating-desc") q = query(ref(db, "nannies"), orderByChild("rating"), limitToLast(PAGE_SIZE));
-      const snap = await get(q);
-      let data = toArray(snap.val());
-      if (data.length === 0) {
-        // Path bos ise root'tan dene (yanlis import edilmis olabilir)
-        const rootSnap = await get(ref(db, "/"));
-        const rootVal = rootSnap.val();
-        const maybe = rootVal?.nannies ?? rootVal;
-        data = toArray(maybe);
-      }
-      // UI tutarlılığı için her durumda client-side filtre uygula
-      if (sort === "price") {
-        data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1])
-                   .sort((a,b)=> a.price_per_hour - b.price_per_hour)
-      }
-      setItems(data);
-      setLastName(data[data.length - 1]?.name || null);
-    } catch (e) {
-      // Fallback: index yoksa tüm veriyi al, client-side sırala/filtrele
-      const snap = await get(ref(db, "nannies"));
-      let data = toArray(snap.val());
-      if (sort.startsWith("name")) {
-        data.sort((a,b)=> a.name.localeCompare(b.name));
-        if (sort === "name-desc") data.reverse();
-      } else if (sort === "price") {
-        data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1]).sort((a,b)=> a.price_per_hour - b.price_per_hour);
-      } else if (sort === "rating-asc" || sort === "rating") {
-        data.sort((a,b)=> a.rating - b.rating);
-      } else if (sort === "rating-desc") {
-        data.sort((a,b)=> b.rating - a.rating);
-      }
-      data = data.slice(0, PAGE_SIZE);
-      setItems(data);
-      setLastName(data[data.length - 1]?.name || null);
-      console.warn('Index not defined in RTDB rules. Using client-side sort as fallback.');
-    }
+    const rootSnap = await get(ref(db, "/"));
+    const rootVal = rootSnap.val();
+    const maybe = rootVal?.nannies ?? rootVal?.nannies?.data ?? rootVal; // tolerate different shapes
+    const data = toArray(maybe);
+    setAllItems(data);
     setLoading(false);
   }
 
-  async function loadMore() {
-    if (!lastName) return;
-    setLoading(true);
-    const q = query(ref(db, "nannies"), orderByChild("name"), startAt(lastName), limitToFirst(PAGE_SIZE + 1));
-    const snap = await get(q);
-    const data = toArray(snap.val());
-    const sliced = data.filter((x, i) => !(i === 0 && x.name === lastName));
-    setItems((prev) => [...prev, ...sliced]);
-    setLastName(sliced[sliced.length - 1]?.name || null);
-    setLoading(false);
+  function applySortAndSlice(pageNum = 1) {
+    let data = [...allItems];
+    if (sort.startsWith("name")) {
+      data.sort((a,b)=> a.name.localeCompare(b.name));
+      if (sort === "name-desc") data.reverse();
+    } else if (sort === "price") {
+      data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1])
+                 .sort((a,b)=> a.price_per_hour - b.price_per_hour);
+    } else if (sort === "rating-asc") {
+      data.sort((a,b)=> a.rating - b.rating);
+    } else if (sort === "rating-desc") {
+      data.sort((a,b)=> b.rating - a.rating);
+    }
+    const end = pageNum * PAGE_SIZE;
+    setItems(data.slice(0, end));
+  }
+
+  function loadMore() {
+    const next = page + 1;
+    setPage(next);
+    applySortAndSlice(next);
   }
 
   useEffect(() => {
-    fetchFirst();
-  }, [sort, price]);
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+    applySortAndSlice(1);
+  }, [allItems, sort, price]);
 
   return (
     <section>
