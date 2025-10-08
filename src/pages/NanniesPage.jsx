@@ -9,7 +9,9 @@ import { setFavorites } from "../utils/favorites";
 const PAGE_SIZE = 3;
 
 function toArray(obj) {
-  return Object.entries(obj || {}).map(([id, v]) => ({ id, ...v }));
+  return Object.entries(obj || {})
+    .map(([id, v]) => (v && typeof v === 'object' ? { id, ...v } : null))
+    .filter(Boolean);
 }
 
 export default function NanniesPage() {
@@ -34,15 +36,16 @@ export default function NanniesPage() {
   function applySortAndSlice(pageNum = 1) {
     let data = [...allItems];
     if (sort.startsWith("name")) {
-      data.sort((a,b)=> a.name.localeCompare(b.name));
+      data.sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
       if (sort === "name-desc") data.reverse();
     } else if (sort === "price") {
-      data = data.filter(x=> Number(x.price_per_hour) >= price[0] && Number(x.price_per_hour) <= price[1])
-                 .sort((a,b)=> a.price_per_hour - b.price_per_hour);
+      data = data
+        .filter(x=> Number(x.price_per_hour || 0) >= price[0] && Number(x.price_per_hour || 0) <= price[1])
+        .sort((a,b)=> (Number(a.price_per_hour || 0) - Number(b.price_per_hour || 0)));
     } else if (sort === "rating-asc") {
-      data.sort((a,b)=> a.rating - b.rating);
+      data.sort((a,b)=> (Number(a.rating || 0) - Number(b.rating || 0)));
     } else if (sort === "rating-desc") {
-      data.sort((a,b)=> b.rating - a.rating);
+      data.sort((a,b)=> (Number(b.rating || 0) - Number(a.rating || 0)));
     }
     const end = pageNum * PAGE_SIZE;
     setItems(data.slice(0, end));
