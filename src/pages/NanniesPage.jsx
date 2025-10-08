@@ -90,7 +90,7 @@ export default function NanniesPage() {
         ))}
       </ul>
       <div style={{ marginTop: 12 }}>
-        <button onClick={loadMore} disabled={loading || !lastName}>Load more</button>
+        <button onClick={loadMore} disabled={loading || items.length >= allItems.length}>Load more</button>
       </div>
     </section>
   );
